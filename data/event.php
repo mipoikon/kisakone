@@ -27,6 +27,7 @@ require_once 'data/venue.php';
 require_once 'data/event_quota.php';
 require_once 'data/class.php';
 require_once 'data/club.php';
+require_once 'data/event.php';
 
 require_once 'core/sort.php';
 require_once 'core/classification.php';
@@ -35,6 +36,7 @@ require_once 'core/event_official.php';
 require_once 'core/player.php';
 require_once 'core/user.php';
 require_once 'core/hole.php';
+require_once 'data/playerlevel.php';
 
 
 // Gets an array of Event objects where the conditions match
@@ -607,7 +609,7 @@ function find_row($arr,$id){
 
 function GetEventResultsWithoutHoles($eventid)
 {
-    $eventid = esc_or_null($eventid, 'int');
+    $eventid = esc_or_null($eventid, 'int');    
 
     $result = db_all("SELECT :Participation.*, player_id AS PlayerId, :Player.firstname AS FirstName,
                             :Player.lastname AS LastName, :Player.pdga AS PDGANumber,
@@ -634,10 +636,17 @@ function GetEventResultsWithoutHoles($eventid)
 
     if (db_is_error($result))
         return $result;
-
+	
     $retValue = array();
     $penalties = array();
     $lastrow = null;
+    
+    // Prepare event player level details
+    $roundPlayerLevelSummaries = array();
+    $rounds = GetEventRounds($eventid);
+    foreach ($rounds as $round) {
+    	$roundPlayerLevelSummaries[$round->id] = GetRoundPlayerLevels($round->id, date('Y-m-d H:i', $round->starttime));
+    }
 
     foreach ($result as $row) {
         if (!$lastrow || @$lastrow['PlayerId'] != $row['PlayerId']) {
@@ -654,6 +663,16 @@ function GetEventResultsWithoutHoles($eventid)
             
        	$row['CalculatedHandicap'] = number_format(CalculatePlayerHandicap($row['PlayerId'],$row['StartTime']),1,'.','');
        	$row['RoundedHandicap'] = round($row['CalculatedHandicap'],0);
+       	if ($roundPlayerLevelSummaries[$row['RoundId']]) {
+       		// Set player level if available
+       		if ($roundPlayerLevelSummaries[$row['RoundId']]->allPlayers[$row['PlayerId']]) {
+       			$row['PlayerLevel'] = $roundPlayerLevelSummaries[$row['RoundId']]->allPlayers[$row['PlayerId']];
+       		}
+       		// Calculate earned level from round if slope available
+       		if ($roundPlayerLevelSummaries[$row['RoundId']]->slope && $roundPlayerLevelSummaries[$row['RoundId']]->slope != 0) {       			
+       			$row['ResultPlayerLevel'] = calulateRoundResultLevel($roundPlayerLevelSummaries[$row['RoundId']], $row['Total']);
+       		}
+       	}
        	$lastrow['HandicappedTotal'] += $row['Total']-$row['RoundedHandicap'];
        	$lastrow['CalculatedHandicap'] = $row['CalculatedHandicap'];
        	$lastrow['RoundedHandicap'] = $row['RoundedHandicap'];
@@ -742,7 +761,7 @@ function GetAllParticipations($eventid)
                                 :Participation.TournamentPoints, :Participation.OverallResult
                             FROM :Participation
                             INNER JOIN :Classification ON :Classification.id = :Participation.Classification
-                            WHERE Event = $eventid AND (EventFeePaid IS NOT NULL OR $paymentEnabled = 0)");
+                            WHERE Event = $eventid AND (EventFeePaid IS NOT NULL OR $paymentEnabled = 0");
 }
 
 

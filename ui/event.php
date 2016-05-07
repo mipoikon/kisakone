@@ -28,6 +28,7 @@ require_once 'sfl/sfl_integration.php';
 require_once 'sfl/pdga_integration.php';
 require_once 'data/calendar.php';
 require_once 'data/configs.php';
+require_once 'data/playerlevel.php';
 
 
 /**
@@ -259,6 +260,14 @@ function InitializeSmartyVariables(&$smarty, $error)
                 }
                 break;
             }
+            
+            // Prepare event player level details
+            $roundPlayerLevelSummaries = array();
+            $rounds = GetEventRounds($event->id);
+            foreach ($rounds as $round) {
+            	$roundPlayerLevelSummaries[$round->id] = GetRoundPlayerLevels($round->id, date('Y-m-d H:i', $round->starttime));
+            	error_log("Slope is " . $roundPlayerLevelSummaries[$round->id]->slope);
+            }            
 
             $smarty->assign('includePoints', $scoresAssigned && $event->tournament);
             $smarty->assign('resultsByClass', $results);
@@ -266,6 +275,7 @@ function InitializeSmartyVariables(&$smarty, $error)
             $rounds = $event->GetRounds();
             $smarty->assign('rounds', $rounds);
             $smarty->assign('numRounds', count($rounds));
+            $smarty->assign('roundPlayerLevels', $roundPlayerLevelSummaries);
             break;
 
         case 'leaderboard_csv':

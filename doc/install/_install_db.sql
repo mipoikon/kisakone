@@ -563,3 +563,17 @@ CREATE TABLE :RoundResultHandicap
   INDEX(RoundResult)
 ) ENGINE=InnoDB;
 SHOW WARNINGS;
+
+CREATE TABLE kisakone_PlayerLevel
+(
+  id INT NOT NULL AUTO_INCREMENT,
+  Player SMALLINT NOT NULL,  
+  Level INT NOT NULL,
+  Type ENUM('seed', 'round') NOT NULL,
+  Time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  RoundResult INT,  
+  PRIMARY KEY (id),
+  UNIQUE KEY(Player, RoundResult),
+  INDEX(Player, RoundResult)
+) ENGINE=InnoDB;
+SHOW WARNINGS;

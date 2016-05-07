@@ -200,6 +200,8 @@
                     {math assign=roundNumber equation="x+1" x=$index}
                     <th>{translate id=round_number_short number=$roundNumber}</th>
                     <th>HCP{$roundNumber}</th>
+                    <th>Pelaajan taso</th>
+                    <th>Kierroksen taso</th>
                 {/foreach}
                 <th>{translate id=leaderboard_hole}</th>
                 <th>+/-</th>
@@ -232,6 +234,8 @@
                 {if !$rresult}{assign var=rresult value=0}{/if}
                 <td id="r{$result.PlayerId}_{$hr_id}">{$rresult}</td>
                 <td>{$result.Results.$roundid.RoundedHandicap} ({$result.Results.$roundid.CalculatedHandicap})</td>
+                <td>{$result.Results.$roundid.PlayerLevel->playerLevel}</td>
+                <td>{$result.Results.$roundid.ResultPlayerLevel}</td>
             {/foreach}
 
             <td id="r{$result.PlayerId}_tc">{$result.TotalCompleted}</td>
@@ -253,4 +257,29 @@
 {/foreach}
 </table>
 <!-- Jyli Handicap end -->
+
+<h2>Pelaajan taso debug</h2>
+{foreach from=$roundPlayerLevels item=roundPlayerLevel}
+	<p>Kierros slope: {$roundPlayerLevel->slope}</p>
+	
+	<p>Kaikki pelaajat: </p>
+	{foreach from=$roundPlayerLevel->allPlayers item=player}
+		<p>Nimi: {$player->firstName} {$player->lastName} Taso: {$player->playerLevel} Tulos: {$player->result} Id: {$player->player}</p>
+		<p>Kaikki tasot: 
+		<ul>
+		{foreach from=$player->allLevels item=level}
+			<li>Taso: {$level->level} Aika: {$level->time} : Tyyppi: {$level->type} Kierros: {$level->round}</li>
+		{/foreach}
+		</ul>
+		<p>Käytetyt tasot: 
+		<ul>
+		{foreach from=$player->usedLevels item=level}
+			<li>Taso: {$level->level} Aika: {$level->time} : Tyyppi: {$level->type} Kierros: {$level->round}</li>
+		{/foreach}
+		</ul>		
+		
+	{/foreach}
+		
+{/foreach}
+
 {/if}
