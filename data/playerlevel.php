@@ -32,7 +32,6 @@ require_once 'core/playerlevel/roundplayerlevelsummary.php';
  * Get round player levels for a round
  */
 function GetRoundPlayerLevels($roundid, $endTime = '9999-01-01') {
-	error_log("Get levels for round $roundid $endTime");
 	// Find player level history for those that finished the round
 	// For convinience, join also player name
 	$result = db_all ("
@@ -66,6 +65,47 @@ function GetRoundPlayerLevels($roundid, $endTime = '9999-01-01') {
 	calculateSlope($roundPlayerLevelSummary);
 	
 	return $roundPlayerLevelSummary;	
+}
+
+/*
+ * Calculates and saves player levels for an event
+ */
+function SavePlayerLevels($eventid) {
+	// Save earned player levels
+	$rounds = GetEventRounds($eventid);
+	foreach ($rounds as $round) {
+		$roundPlayerLevelSummary =  GetRoundPlayerLevels($round->id, date('Y-m-d H:i', $round->starttime));
+		
+		if (!$roundPlayerLevelSummary->slope || $roundPlayerLevelSummary->slope == 0) {
+			// No slope, cannot calculate player levels
+			continue;
+		}
+		
+		// Loop all results and calculate individual level
+		$result = db_all("SELECT :RoundResult.id, :RoundResult.Player, DidNotFinish, Course, Result FROM :RoundResult,:Round,:Event WHERE Round=:Round.id and :Round.Event= $eventid");
+		
+		foreach ($result as $row) {		
+			$dnf = $row['DidNotFinish'];
+			$course = $row['Course'];
+			$id = $row['id'];
+			$player = $row['Player'];
+			$result = $row['Result'];
+			
+			
+			if ($dnf == 1) continue;
+
+			$level = calulateRoundResultLevel($roundPlayerLevelSummary, $result);
+			
+			SaveRoundPlayerLevel($level, $player, $id);
+		}		
+	}
+}
+
+function SaveRoundPlayerLevel($level, $player, $roundResult) {
+	// Delete first, we may be re-calculating
+	$del = db_exec("DELETE FROM :PlayerLevel WHERE RoundResult = $roundResult");
+	// TODO: Use round start time as level time
+	$ins = db_exec("INSERT INTO :PlayerLevel (Player, Level, Type, RoundResult) VALUES ($player, $level, 'round', $roundResult)");
 }
 
 /*
@@ -158,8 +198,7 @@ function toPlayersLevels($rows) {
 			$playerLevelSummary->lastName = $row['lastname'];
 			$playerLevelSummary->player = $currentPlayer;
 			$results[$currentPlayer] = $playerLevelSummary;
-		}			
-		error_log("Name " . $row['firstname'] . " " . $row['lastname']);
+		}
 		$playerLevel = new PlayerLevel($row['id'], $row['Level'], $row['Type'], $row['Time'], $row['RoundResult']);
 		$playerLevelSummary->pushToAllLevels($playerLevel);
 	}

@@ -335,7 +335,12 @@ function EditEvent($eventid, $name, $club, $venuename, $duration, $playerlimit, 
 
       	$del = db_exec("delete from :RoundResultHandicap where RoundResult=$id");
       	$ins = db_exec("insert into :RoundResultHandicap (RoundResult,Handicap) values ($id,$hcp)");
+      	    	
 	}
+	
+	SavePlayerLevels($eventid);
+	
+	
   }
 }
 
